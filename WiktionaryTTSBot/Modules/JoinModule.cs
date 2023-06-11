@@ -11,10 +11,12 @@ namespace WiktionaryTTSBot.Modules;
 public class JoinModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly MessageListener _messageListener;
+    private readonly AudioService _audioService;
     
-    public JoinModule(MessageListener messageListener)
+    public JoinModule(MessageListener messageListener, AudioService audioService)
     {
         _messageListener = messageListener;
+        _audioService = audioService;
     }
     
     [SlashCommand("setup", "Setup the text channel you're currently in to use for TTS")]
@@ -23,7 +25,7 @@ public class JoinModule : InteractionModuleBase<SocketInteractionContext>
         
     }
 
-    [SlashCommand("join", "Join the voice channel you're currently in")]
+    [SlashCommand("join", "Join the voice channel you're currently in", runMode: RunMode.Async)]
     public async Task Join()
     {
         var guildUser = Context.User as IGuildUser;
@@ -33,15 +35,22 @@ public class JoinModule : InteractionModuleBase<SocketInteractionContext>
         }
         else
         {
-            _ = Task.Run(async () =>
-            {        
-                Console.WriteLine("1");
-                _messageListener.AudioClient = await guildUser.VoiceChannel.ConnectAsync();
-                Console.WriteLine("2");
-                // Respond to the command
-                Console.WriteLine("3");
-                await RespondAsync("Command completed.");
-            });
+            await _audioService.JoinAudio(guildUser.Guild, guildUser.VoiceChannel);
+            await RespondAsync("Joined the voice channel.");
+        }
+    }
+
+    [SlashCommand("leave", "Leave the voice channel you're currently in")]
+    public async Task Leave()
+    {
+        if (Context.User is IGuildUser guildUser)
+        {
+            await _audioService.LeaveAudio(guildUser.Guild);
+            await RespondAsync("Left the voice channel");
+        }
+        else
+        {
+            await RespondAsync("You're not in a server");
         }
     }
 }

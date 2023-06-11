@@ -40,6 +40,8 @@ public class Program
             .AddSingleton(x => new InteractionService(x.GetRequiredService<DiscordSocketClient>()))
             .AddSingleton<InteractionHandler>()
             .AddSingleton<MessageListener>()
+            .AddSingleton<AudioService>()
+            .AddSingleton<HttpClient>()
             .BuildServiceProvider();
     }
 

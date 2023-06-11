@@ -2,57 +2,86 @@
 using System.Diagnostics;
 using Discord;
 using Discord.Audio;
+using Newtonsoft.Json;
 
 namespace WiktionaryTTSBot;
 
+public class AudioInstance
+{
+    public required IAudioClient Client { get; set; }
+    public AudioOutStream? OutStream { get; set; }
+}
+
 public class AudioService
 {
-    private readonly ConcurrentDictionary<ulong, IAudioClient> _connectedChannels = new();
+    /// <summary>
+    /// An instance for each Discord Guild (id).
+    /// </summary>
+    private readonly ConcurrentDictionary<ulong, AudioInstance> _audioInstances = new();
 
-    public async Task JoinAudio(IGuild guild, IVoiceChannel target)
+    public async Task JoinAudio(IGuild guild, IVoiceChannel channel)
     {
-        if (_connectedChannels.TryGetValue(guild.Id, out IAudioClient _))
+        // Already in channel?
+        if (_audioInstances.TryGetValue(guild.Id, out _))
         {
             return;
         }
-        if (target.Guild.Id != guild.Id)
+        
+        // Different guild?
+        if (channel.Guild.Id != guild.Id)
         {
             return;
         }
 
-        var audioClient = await target.ConnectAsync();
+        IAudioClient? audioClient = await channel.ConnectAsync();
 
-        if (_connectedChannels.TryAdd(guild.Id, audioClient))
+        var instance = new AudioInstance
         {
-            //await Log(LogSeverity.Info, $"Connected to voice on {guild.Name}.");
+            Client = audioClient
+        };
+        if (!_audioInstances.TryAdd(guild.Id, instance))
+        {
+            Console.WriteLine("Error: failed to add AudioInstance");
         }
     }
 
     public async Task LeaveAudio(IGuild guild)
     {
-        if (_connectedChannels.TryRemove(guild.Id, out IAudioClient? client))
+        if (_audioInstances.TryRemove(guild.Id, out AudioInstance? instance))
         {
-            await client.StopAsync();
+            _audioInstances.Remove(guild.Id, out _);
+            await instance.Client.StopAsync();
+            Console.WriteLine($"Disconnected from voice on guild {guild.Name} ");
             //await Log(LogSeverity.Info, $"Disconnected from voice on {guild.Name}.");
         }
     }
-    
-    public async Task SendAudioAsync(IGuild guild, IMessageChannel channel, string path)
+
+    public bool IsConnectedToAChannel(IGuild guild) => _audioInstances.ContainsKey(guild.Id);
+
+    public async Task SendAudioAsync(IGuild guild, IMessageChannel channel, string url)
     {
-        // Your task: Get a full path to the file if the value of 'path' is only a filename.
-        if (!File.Exists(path))
+        //await Log(LogSeverity.Debug, $"Starting playback of {path} in {guild.Name}");
+        using Process? ffmpeg = CreateStream(url);
+        await using Stream output = ffmpeg.StandardOutput.BaseStream;
+        if (!_audioInstances.TryGetValue(guild.Id, out AudioInstance? instance))
         {
-            await channel.SendMessageAsync("File does not exist.");
+            Console.WriteLine($"Trying to get audio instance for guild {guild.Name} but failed");
             return;
         }
-        IAudioClient client;
-        if (_connectedChannels.TryGetValue(guild.Id, out client))
+
+        instance.OutStream ??= instance.Client.CreatePCMStream(AudioApplication.Mixed);
+        
+        try
         {
-            //await Log(LogSeverity.Debug, $"Starting playback of {path} in {guild.Name}");
-            var output = CreateStream(path).StandardOutput.BaseStream;
-            var stream = client.CreatePCMStream(AudioApplication.Music);
-            await output.CopyToAsync(stream);
-            await stream.FlushAsync().ConfigureAwait(false);
+            await output.CopyToAsync(instance.OutStream);
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine(exception.ToString());
+        }
+        finally
+        {
+            await instance.OutStream.FlushAsync();
         }
     }
 
