@@ -2,14 +2,19 @@
 using System.Diagnostics;
 using Discord;
 using Discord.Audio;
-using Newtonsoft.Json;
 
 namespace WiktionaryTTSBot;
 
 public class AudioInstance
 {
+    public AudioInstance()
+    {
+        UrlQueue = new Queue<string>();
+    }
     public required IAudioClient Client { get; set; }
     public AudioOutStream? OutStream { get; set; }
+
+    public Queue<string> UrlQueue { get; }
 }
 
 public class AudioService
@@ -58,16 +63,41 @@ public class AudioService
 
     public bool IsConnectedToAChannel(IGuild guild) => _audioInstances.ContainsKey(guild.Id);
 
-    public async Task SendAudioAsync(IGuild guild, IMessageChannel channel, string url)
+    public void Enqueue(IGuild guild, string url)
     {
-        //await Log(LogSeverity.Debug, $"Starting playback of {path} in {guild.Name}");
-        using Process? ffmpeg = CreateStream(url);
-        await using Stream output = ffmpeg.StandardOutput.BaseStream;
         if (!_audioInstances.TryGetValue(guild.Id, out AudioInstance? instance))
         {
             Console.WriteLine($"Trying to get audio instance for guild {guild.Name} but failed");
             return;
         }
+        instance.UrlQueue.Enqueue(url);
+    }
+
+    public async Task ProcessQueue(IGuild guild)
+    {
+        if (!_audioInstances.TryGetValue(guild.Id, out AudioInstance? instance))
+        {
+            Console.WriteLine($"Trying to get audio instance for guild {guild.Name} but failed");
+            return;
+        }
+
+        while (instance.UrlQueue.Any())
+        {
+            string url = instance.UrlQueue.Dequeue();
+            await SendAudioAsync(instance, url);
+        }
+    }
+
+    private async Task SendAudioAsync(AudioInstance instance, string url)
+    {
+        //await Log(LogSeverity.Debug, $"Starting playback of {path} in {guild.Name}");
+        using Process? ffmpeg = CreateStream(url);
+        if (ffmpeg == null)
+        {
+            Console.WriteLine("Something went wrong with creating the ffmpeg process.");
+            return;
+        }
+        await using Stream output = ffmpeg.StandardOutput.BaseStream;
 
         instance.OutStream ??= instance.Client.CreatePCMStream(AudioApplication.Mixed);
         
@@ -84,7 +114,7 @@ public class AudioService
             await instance.OutStream.FlushAsync();
         }
     }
-
+    
     private Process? CreateStream(string path)
     {
         return Process.Start(new ProcessStartInfo
