@@ -5,6 +5,7 @@ using Discord.Interactions;
 using Discord.Net;
 using Discord.WebSocket;
 using Newtonsoft.Json;
+using Microsoft.Extensions.Configuration;
 
 namespace WiktionaryTTSBot.Modules;
 
@@ -12,17 +13,23 @@ public class JoinModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly MessageListener _messageListener;
     private readonly AudioService _audioService;
-    
-    public JoinModule(MessageListener messageListener, AudioService audioService)
+    private readonly IConfiguration _configuration;
+
+    public JoinModule(MessageListener messageListener, AudioService audioService, IConfiguration configuration)
     {
         _messageListener = messageListener;
         _audioService = audioService;
+        _configuration = configuration;
+
     }
     
     [SlashCommand("setup", "Setup the text channel you're currently in to use for TTS")]
     public async Task Setup()
     {
-        
+        var guildId = Context.Guild.Id;
+        _configuration[$"Guilds:{guildId}:ttsChannel"] = Context.Channel.Id.ToString();
+
+        await RespondAsync("Setup complete. The bot will now listen for messages that are sent in this channel.");
     }
 
     [SlashCommand("join", "Join the voice channel you're currently in", runMode: RunMode.Async)]

@@ -2,6 +2,7 @@
 using Discord.Interactions;
 using Discord.WebSocket;
 using System.Reflection;
+using Microsoft.Extensions.Configuration;
 
 namespace WiktionaryTTSBot
 {
@@ -10,12 +11,14 @@ namespace WiktionaryTTSBot
         private readonly DiscordSocketClient _client;
         private readonly InteractionService _handler;
         private readonly IServiceProvider _services;
+        private readonly IConfiguration _configuration;
 
-        public InteractionHandler(DiscordSocketClient client, InteractionService handler, IServiceProvider services)
+        public InteractionHandler(DiscordSocketClient client, InteractionService handler, IServiceProvider services, IConfiguration configuration)
         {
             _client = client;
             _handler = handler;
             _services = services;
+            _configuration = configuration;
         }
 
         public async Task InitializeAsync()
@@ -37,8 +40,7 @@ namespace WiktionaryTTSBot
         private async Task ReadyAsync()
         {
             ulong guildZeeland = 806546656296042506;
-            ulong guildBBR = 379314880764968962;
-            
+
             // Context & Slash commands can be automatically registered, but this process needs to happen after the client enters the READY state.
             // Since Global Commands take around 1 hour to register, we should use a test guild to instantly update and test our commands.
             if (Program.IsDebug())

@@ -25,8 +25,7 @@ public class MessageListener
 
     private async Task OnMessageReceived(SocketMessage msg)
     {
-        ulong zeeland = 1117142841358028840;
-        ulong bbr = 1117428599163715735;
+        ulong zeeland = 1117482626291347498;
         if (msg.Channel.Id == zeeland && msg.Author is SocketGuildUser guildUser &&
             _audioService.IsConnectedToAChannel(guildUser.Guild))
         {

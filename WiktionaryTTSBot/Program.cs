@@ -3,6 +3,7 @@ using Discord.Audio;
 using Discord.Commands;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace WiktionaryTTSBot;
@@ -42,6 +43,7 @@ public class Program
             .AddSingleton<MessageListener>()
             .AddSingleton<AudioService>()
             .AddSingleton<HttpClient>()
+            .AddSingleton<IConfiguration>()
             .BuildServiceProvider();
     }
 
