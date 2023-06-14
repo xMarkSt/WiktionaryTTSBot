@@ -11,7 +11,6 @@ public class Program
 {
     private readonly IServiceProvider _services;
 
-
     public Program()
     {
         _services = CreateServices();
@@ -22,7 +21,7 @@ public class Program
 
     static IServiceProvider CreateServices()
     {
-        var config = new DiscordSocketConfig
+        var socketConfig = new DiscordSocketConfig
         {
             GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
         };
@@ -34,13 +33,14 @@ public class Program
         };
 
         return new ServiceCollection()
-            .AddSingleton(config)
+            .AddSingleton(socketConfig)
             .AddSingleton<DiscordSocketClient>()
             // .AddSingleton(servConfig)
             .AddSingleton(x => new InteractionService(x.GetRequiredService<DiscordSocketClient>()))
             .AddSingleton<InteractionHandler>()
             .AddSingleton<MessageListener>()
             .AddSingleton<AudioService>()
+            .AddSingleton<SettingsService>()
             .AddSingleton<HttpClient>()
             .BuildServiceProvider();
     }

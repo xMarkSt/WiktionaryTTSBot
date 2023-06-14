@@ -1,10 +1,7 @@
-﻿using System.Diagnostics;
-using Discord;
-using Discord.Audio;
+﻿using Discord;
 using Discord.Interactions;
-using Discord.Net;
-using Discord.WebSocket;
-using Newtonsoft.Json;
+
+using WiktionaryTTSBot.Settings;
 
 namespace WiktionaryTTSBot.Modules;
 
@@ -12,17 +9,30 @@ public class JoinModule : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly MessageListener _messageListener;
     private readonly AudioService _audioService;
-    
-    public JoinModule(MessageListener messageListener, AudioService audioService)
+    private readonly SettingsService _settingsService;
+
+    public JoinModule(MessageListener messageListener, AudioService audioService, SettingsService settingsService)
     {
         _messageListener = messageListener;
         _audioService = audioService;
+        _settingsService = settingsService;
     }
     
     [SlashCommand("setup", "Setup the text channel you're currently in to use for TTS")]
     public async Task Setup()
     {
-        
+        ulong guildId = Context.Guild.Id;
+        GuildsSettings guildsSettings = await _settingsService.GetGuildsSettings();
+        if (guildsSettings.Guilds.TryGetValue(guildId, out GuildSettings? currentGuild))
+        {
+            currentGuild.TtsChannel = Context.Channel.Id;
+        }
+        else
+        {
+            guildsSettings.Guilds.Add(guildId, new GuildSettings {TtsChannel = Context.Channel.Id});
+        }
+        await _settingsService.SaveGuildsSettings(guildsSettings);
+        await RespondAsync("Setup complete. The bot will now listen for messages that are sent in this channel.");
     }
 
     [SlashCommand("join", "Join the voice channel you're currently in", runMode: RunMode.Async)]
