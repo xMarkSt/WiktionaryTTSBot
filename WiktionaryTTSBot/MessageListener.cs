@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using WiktionaryTTSBot.Settings;
 
 namespace WiktionaryTTSBot;
 
@@ -7,12 +8,14 @@ public class MessageListener
 {
     private readonly DiscordSocketClient _client;
     private readonly AudioService _audioService;
+    private readonly SettingsService _settingsService;
     private readonly SemaphoreSlim _audioSemaphore = new(1);
 
-    public MessageListener(DiscordSocketClient client, AudioService audioService)
+    public MessageListener(DiscordSocketClient client, AudioService audioService, SettingsService settingsService)
     {
         _client = client;
         _audioService = audioService;
+        _settingsService = settingsService;
     }
 
     public void InitializeAsync()
@@ -22,9 +25,14 @@ public class MessageListener
 
     private async Task OnMessageReceived(SocketMessage msg)
     {
-        ulong zeeland = 1117482626291347498;
-        if (msg.Channel.Id == zeeland && msg.Author is SocketGuildUser guildUser &&
-            _audioService.IsConnectedToAChannel(guildUser.Guild))
+        // ulong zeeland = 1117482626291347498;
+        GuildsSettings guildsSettings = await _settingsService.GetGuildsSettings();
+        if (msg.Author is not SocketGuildUser guildUser) return;
+        
+        // Bot connected to guild, settings exist and tts channel matches this channel
+        if (_audioService.IsConnectedToAChannel(guildUser.Guild) &&
+            guildsSettings.Guilds.TryGetValue(guildUser.Guild.Id, out GuildSettings? guildSettings) &&
+            msg.Channel.Id == guildSettings.TtsChannel)
         {
             // This code only allows one message to be processed at a time,
             // but multiple could be processed at the same time as long as it's on different servers.

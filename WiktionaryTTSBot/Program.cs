@@ -3,7 +3,6 @@ using Discord.Audio;
 using Discord.Commands;
 using Discord.Interactions;
 using Discord.WebSocket;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace WiktionaryTTSBot;
@@ -11,7 +10,6 @@ namespace WiktionaryTTSBot;
 public class Program
 {
     private readonly IServiceProvider _services;
-
 
     public Program()
     {
@@ -23,7 +21,7 @@ public class Program
 
     static IServiceProvider CreateServices()
     {
-        var config = new DiscordSocketConfig
+        var socketConfig = new DiscordSocketConfig
         {
             GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
         };
@@ -35,15 +33,15 @@ public class Program
         };
 
         return new ServiceCollection()
-            .AddSingleton(config)
+            .AddSingleton(socketConfig)
             .AddSingleton<DiscordSocketClient>()
             // .AddSingleton(servConfig)
             .AddSingleton(x => new InteractionService(x.GetRequiredService<DiscordSocketClient>()))
             .AddSingleton<InteractionHandler>()
             .AddSingleton<MessageListener>()
             .AddSingleton<AudioService>()
+            .AddSingleton<SettingsService>()
             .AddSingleton<HttpClient>()
-            .AddSingleton<IConfiguration>()
             .BuildServiceProvider();
     }
 

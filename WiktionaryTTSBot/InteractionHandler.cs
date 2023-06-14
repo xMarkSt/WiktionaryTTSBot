@@ -2,7 +2,6 @@
 using Discord.Interactions;
 using Discord.WebSocket;
 using System.Reflection;
-using Microsoft.Extensions.Configuration;
 
 namespace WiktionaryTTSBot
 {
@@ -11,14 +10,12 @@ namespace WiktionaryTTSBot
         private readonly DiscordSocketClient _client;
         private readonly InteractionService _handler;
         private readonly IServiceProvider _services;
-        private readonly IConfiguration _configuration;
 
-        public InteractionHandler(DiscordSocketClient client, InteractionService handler, IServiceProvider services, IConfiguration configuration)
+        public InteractionHandler(DiscordSocketClient client, InteractionService handler, IServiceProvider services)
         {
             _client = client;
             _handler = handler;
             _services = services;
-            _configuration = configuration;
         }
 
         public async Task InitializeAsync()
